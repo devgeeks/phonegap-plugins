@@ -13,10 +13,25 @@
 #endif
 
 #import "AudioStreamer.h"
+#import <UIKit/UIkit.h>
 
-@interface AudioStream : PGPlugin <UITabBarDelegate> {
-    AudioStreamer *streamer;
-	NSTimer *progressUpdateTimer;
+@protocol ResponderViewDelegate;
+@interface ResponderView: UIView {
+	id <ResponderViewDelegate> delegate;
+}
+
+@property (nonatomic, assign) id <ResponderViewDelegate> delegate;
+
+@end
+
+@protocol ResponderViewDelegate <NSObject>
+@optional
+- (void)playPauseEvent:(ResponderView *)tutorial;
+@end
+
+@interface AudioStream : PGPlugin <ResponderViewDelegate> {
+    AudioStreamer* streamer;
+	NSTimer* progressUpdateTimer;
     
     NSString* successCallback;
     NSString* failCallback;
@@ -25,6 +40,7 @@
     NSString* progressString;
     NSString* streamType;
 
+	ResponderView* responderView;
 }
 
 @property (nonatomic, copy) NSString* successCallback;
@@ -33,6 +49,8 @@
 @property (nonatomic, copy) NSString* streamUrl;
 @property (nonatomic, copy) NSString* progressString;
 @property (nonatomic, copy) NSString* streamType;
+
+@property (nonatomic, assign) ResponderView* responderView;
 
 - (void)play:(NSMutableArray*)arguments withDict:(NSMutableDictionary*)options;
 - (void)stop:(NSMutableArray*)arguments withDict:(NSMutableDictionary*)options;

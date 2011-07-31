@@ -225,6 +225,9 @@ void ASReadStreamCallBack
 @synthesize httpHeaders;
 @synthesize fileExtension;
 
+@synthesize error;
+@synthesize errorMessage;
+
 //
 // initWithURL
 //
@@ -360,44 +363,19 @@ void ASReadStreamCallBack
 }
 
 //
-// presentAlertWithTitle:message:
+// mainThreadStateNotification
 //
-// Common code for presenting error dialogs
+// Method invoked on main thread to send notifications to the main thread's
+// notification center.
 //
-// Parameters:
-//    title - title for the dialog
-//    message - main test for the dialog
-//
-- (void)presentAlertWithTitle:(NSString*)title message:(NSString*)message
+- (void)mainThreadStateNotification
 {
-#if TARGET_OS_IPHONE
-	UIAlertView *alert = [
-		[[UIAlertView alloc]
-			initWithTitle:title
-			message:message
-			delegate:self
-			cancelButtonTitle:NSLocalizedString(@"OK", @"")
-			otherButtonTitles: nil]
-		autorelease];
-	[alert
-		performSelector:@selector(show)
-		onThread:[NSThread mainThread]
-		withObject:nil
-		waitUntilDone:NO];
-#else
-	NSAlert *alert =
-		[NSAlert
-			alertWithMessageText:title
-			defaultButton:NSLocalizedString(@"OK", @"")
-			alternateButton:nil
-			otherButton:nil
-			informativeTextWithFormat:message];
-	[alert
-		performSelector:@selector(runModal)
-		onThread:[NSThread mainThread]
-		withObject:nil
-		waitUntilDone:NO];
-#endif
+	NSNotification *notification =
+		[NSNotification
+			notificationWithName:ASStatusChangedNotification
+			object:self];
+	[[NSNotificationCenter defaultCenter]
+		postNotification:notification];
 }
 
 //
@@ -419,20 +397,20 @@ void ASReadStreamCallBack
 		}
 		
 		errorCode = anErrorCode;
-
+		
 		if (err)
 		{
 			char *errChars = (char *)&err;
 			NSLog(@"%@ err: %c%c%c%c %d\n",
-				[AudioStreamer stringForErrorCode:anErrorCode],
-				errChars[3], errChars[2], errChars[1], errChars[0],
-				(int)err);
+				  [AudioStreamer stringForErrorCode:anErrorCode],
+				  errChars[3], errChars[2], errChars[1], errChars[0],
+				  (int)err);
 		}
 		else
 		{
 			NSLog(@"%@", [AudioStreamer stringForErrorCode:anErrorCode]);
 		}
-
+		
 		if (state == AS_PLAYING ||
 			state == AS_PAUSED ||
 			state == AS_BUFFERING)
@@ -441,26 +419,14 @@ void ASReadStreamCallBack
 			stopReason = AS_STOPPING_ERROR;
 			AudioQueueStop(audioQueue, true);
 		}
-
-		[self presentAlertWithTitle:NSLocalizedStringFromTable(@"File Error", @"Errors", nil)
-							message:NSLocalizedStringFromTable(@"Unable to configure network read stream.", @"Errors", nil)];
+		
+		self.error = NSLocalizedStringFromTable(@"File Error", @"Errors", nil);
+		self.errorMessage = NSLocalizedStringFromTable(@"Unable to configure network read stream.", @"Errors", nil);
+		
+//		[self presentAlertWithTitle:NSLocalizedStringFromTable(@"File Error", @"Errors", nil)
+//							message:NSLocalizedStringFromTable(@"Unable to configure network read stream.", @"Errors", nil)];
+		[self mainThreadStateNotification];
 	}
-}
-
-//
-// mainThreadStateNotification
-//
-// Method invoked on main thread to send notifications to the main thread's
-// notification center.
-//
-- (void)mainThreadStateNotification
-{
-	NSNotification *notification =
-		[NSNotification
-			notificationWithName:ASStatusChangedNotification
-			object:self];
-	[[NSNotificationCenter defaultCenter]
-		postNotification:notification];
 }
 
 //
@@ -566,6 +532,22 @@ void ASReadStreamCallBack
 }
 
 //
+// isStopped
+//
+// returns YES if the AudioStream is in the AS_STOPPED state (i.e.
+// isn't doing anything).
+//
+- (BOOL)isStopped
+{
+	if (state == AS_STOPPED)
+	{
+		return YES;
+	}
+	
+	return NO;
+}
+
+//
 // hintForFileExtension:
 //
 // Generates a first guess for the file type based on the file's extension
@@ -657,8 +639,12 @@ void ASReadStreamCallBack
 			kCFStreamPropertyHTTPShouldAutoredirect,
 			kCFBooleanTrue) == false)
 		{
-			[self presentAlertWithTitle:NSLocalizedStringFromTable(@"File Error", @"Errors", nil)
-								message:NSLocalizedStringFromTable(@"Unable to configure network read stream.", @"Errors", nil)];
+//			[self presentAlertWithTitle:NSLocalizedStringFromTable(@"File Error", @"Errors", nil)
+//								message:NSLocalizedStringFromTable(@"Unable to configure network read stream.", @"Errors", nil)];
+			self.error = NSLocalizedStringFromTable(@"File Error", @"Errors", nil);
+			self.errorMessage = NSLocalizedStringFromTable(@"Unable to configure network read stream.", @"Errors", nil);
+			[self mainThreadStateNotification];
+			
 			return NO;
 		}
 		
@@ -698,8 +684,12 @@ void ASReadStreamCallBack
 		if (!CFReadStreamOpen(stream))
 		{
 			CFRelease(stream);
-			[self presentAlertWithTitle:NSLocalizedStringFromTable(@"File Error", @"Errors", nil)
-								message:NSLocalizedStringFromTable(@"Unable to configure network read stream.", @"Errors", nil)];
+//			[self presentAlertWithTitle:NSLocalizedStringFromTable(@"File Error", @"Errors", nil)
+//								message:NSLocalizedStringFromTable(@"Unable to configure network read stream.", @"Errors", nil)];
+			self.error = NSLocalizedStringFromTable(@"File Error", @"Errors", nil);
+			self.errorMessage = NSLocalizedStringFromTable(@"Unable to configure network read stream.", @"Errors", nil);
+			[self mainThreadStateNotification];
+			
 			return NO;
 		}
 		

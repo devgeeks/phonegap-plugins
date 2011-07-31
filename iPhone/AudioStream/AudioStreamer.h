@@ -25,7 +25,7 @@
 #import <UIKit/UIKit.h>
 #else
 #import <Cocoa/Cocoa.h>
-#endif TARGET_OS_IPHONE			
+#endif // TARGET_OS_IPHONE			
 
 #include <pthread.h>
 #include <AudioToolbox/AudioToolbox.h>
@@ -165,6 +165,10 @@ extern NSString * const ASStatusChangedNotification;
 								// time)
 	double packetDuration;		// sample rate times frames per packet
 	double lastProgress;		// last calculated progress point
+	
+	NSString *error;			// Error message to be handed back
+	NSString *errorMessage;		// to the main thread
+	
 #if TARGET_OS_IPHONE
 	BOOL pausedByInterruption;
 #endif
@@ -176,7 +180,11 @@ extern NSString * const ASStatusChangedNotification;
 @property (readonly) double duration;
 @property (readwrite) UInt32 bitRate;
 @property (readonly) NSDictionary *httpHeaders;
-@property (retain,readwrite) NSString *fileExtension;
+@property (copy,readwrite) NSString *fileExtension;
+
+@property (copy,readwrite) NSString *error;
+@property (copy,readwrite) NSString *errorMessage;
+
 
 - (id)initWithURL:(NSURL *)aURL;
 - (void)start;
@@ -186,6 +194,7 @@ extern NSString * const ASStatusChangedNotification;
 - (BOOL)isPaused;
 - (BOOL)isWaiting;
 - (BOOL)isIdle;
+- (BOOL)isStopped;
 - (void)seekToTime:(double)newSeekTime;
 - (double)calculatedBitRate;
 

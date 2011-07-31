@@ -14,10 +14,63 @@
 #import <MediaPlayer/MediaPlayer.h>
 #import <CFNetwork/CFNetwork.h>
 
+@implementation ResponderView
+@synthesize delegate;
+
+// Override canBecomeFirstResponder to receieve remote control events
+-(BOOL)canBecomeFirstResponder 
+{
+	return YES;
+}
+
+// Process remote control events
+-(void)remoteControlReceivedWithEvent:(UIEvent *)event
+{
+	switch (event.subtype) {
+		case UIEventSubtypeRemoteControlTogglePlayPause:
+			[[self delegate] playPauseEvent:self];
+			break;
+		default:
+			break;
+	}
+}
+- (void)setup {	
+	float version = [[[UIDevice currentDevice] systemVersion] floatValue];
+	if (version >= 4.0) {
+		// Tell system to receive remote control events
+		[[UIApplication sharedApplication] beginReceivingRemoteControlEvents];
+		[self becomeFirstResponder];
+	}
+}
+
+- (void)dealloc {
+	[super dealloc];
+}
+
+@end
+
 @implementation AudioStream
 
-@synthesize successCallback, failCallback, status, streamUrl, progressString, streamType;
+@synthesize successCallback, failCallback, status, streamUrl, progressString, streamType, responderView;
 
+#ifndef __IPHONE_3_0
+@synthesize webView;
+#endif
+
+-(PGPlugin*) initWithWebView:(UIWebView*)theWebView
+{
+    self = (AudioStream*)[super initWithWebView:theWebView];
+#if __IPHONE_4_0
+	CGRect viewRect = CGRectMake(0,0,1,1); // can it be all zeros or be hidden?
+	self.responderView = [[[ResponderView alloc] initWithFrame:viewRect] autorelease];
+	self.responderView.delegate = self;
+	[self.webView.superview addSubview:self.responderView];
+	self.responderView.hidden = YES;
+#endif
+    return self;
+}
+
+#pragma mark -
 #pragma mark creation and destruction
 //
 // destroyStreamer
@@ -35,7 +88,7 @@
 		progressUpdateTimer = nil;
 		
 		[streamer stop];
-		[streamer release];
+		//[streamer release];
 		streamer = nil;
         NSString* jsCallBack = [NSString stringWithFormat:@"%@(\"%@\");", self.successCallback, @"isStopped"];
         [self writeJavascript: jsCallBack];
@@ -84,39 +137,13 @@
                                              selector:@selector(playbackStateChanged:)
                                                  name:ASStatusChangedNotification
                                                object:streamer];
-//    NSString* jsCallBack = [NSString stringWithFormat:@"%@(\"%@\");", self.successCallback, status];
-//    [self writeJavascript: jsCallBack];
-}
-
-#pragma mark playback controls
-
 #if __IPHONE_4_0
-// Override canBecomeFirstResponder to receieve remote control events
--(BOOL)canBecomeFirstResponder 
-{
-	return YES;
+	if (self.responderView) [self.responderView setup];
+#endif
 }
 
-// Process remote control events
--(void)remoteControlReceivedWithEvent:(UIEvent *)event
-{
-	switch (event.subtype) {
-		case UIEventSubtypeRemoteControlTogglePlayPause:
-			if ([[self status] isEqualToString:@"isPlaying"] || [[self status] isEqualToString:@"isWaiting"]) {
-                [self destroyStreamer];
-            } else {
-                if (streamUrl) {
-                    [self createStreamer];
-                    [streamer start];
-                }
-            }
-            // otherwise, just ignore it, really...
-			break;
-		default:
-			break;
-	}
-}
-#endif
+#pragma mark -
+#pragma mark playback controls
 
 - (void) setStreamType:(NSMutableArray*)arguments withDict:(NSMutableDictionary*)options
 {
@@ -148,7 +175,7 @@
     }
     
 	if (argc > 2) {
-		self.failCallback = [arguments objectAtIndex:0];	
+		self.failCallback = [arguments objectAtIndex:2];	
 	}
     
     [self createStreamer];
@@ -168,7 +195,22 @@
     [self destroyStreamer];
 }
 
+- (void) playPauseEvent:(ResponderView *)tutorial
+{
+	if (streamer) 
+	{
+		[self destroyStreamer];
+	}
+	else
+	{
+		[self createStreamer];
+		[streamer start];
+	}
+}
+
+#pragma mark -
 #pragma mark state callbacks
+
 //
 // playbackStateChanged:
 //
@@ -179,23 +221,36 @@
 {    
 	if ([streamer isWaiting])
 	{
-        [UIApplication sharedApplication].networkActivityIndicatorVisible = YES;
+		[UIApplication sharedApplication].networkActivityIndicatorVisible = YES;
 		[self setStatus:@"isWaiting"];
+	}
+	else if ([streamer isPaused])
+	{
+		[UIApplication sharedApplication].networkActivityIndicatorVisible = NO;
+		[self setStatus:@"isPaused"];
 	}
 	else if ([streamer isPlaying])
 	{
-        [UIApplication sharedApplication].networkActivityIndicatorVisible = NO;
+		[UIApplication sharedApplication].networkActivityIndicatorVisible = NO;
 		[self setStatus:@"isPlaying"];
 	}
 	else if ([streamer isIdle])
 	{
-        [UIApplication sharedApplication].networkActivityIndicatorVisible = NO;
+		[UIApplication sharedApplication].networkActivityIndicatorVisible = NO;
 		[self destroyStreamer];
 		[self setStatus:@"isIdle"];
-    }
-    
-	NSString* jsCallBack = [NSString stringWithFormat:@"%@(\"%@\");", self.successCallback, status];
-    [self writeJavascript: jsCallBack];
+	}
+	
+	if (streamer.error && streamer.errorMessage)
+	{
+		NSString* jsCallBack = [NSString stringWithFormat:@"%@({'error':'%@','errorMessage':'%@'});", self.failCallback, streamer.error, streamer.errorMessage];
+		[self writeJavascript: jsCallBack];
+	}
+	else
+	{
+		NSString* jsCallBack = [NSString stringWithFormat:@"%@('%@');", self.successCallback, status];
+		[self writeJavascript: jsCallBack];
+	}
 }
 
 
@@ -221,7 +276,9 @@
     [self writeJavascript: jsCallBack];
 }
 
+#pragma mark -
 #pragma mark dealloc and cleanup
+
 //
 // dealloc
 //
@@ -245,6 +302,9 @@
     
     [failCallback release];
     failCallback = nil;
+	
+	[streamer release];
+	streamer = nil;
 	
     [super dealloc];
 }
