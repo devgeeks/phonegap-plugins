@@ -24,6 +24,10 @@ AudioStream.prototype.setProgress = function(progress) {
     AudioStream.prototype.progress = progress;
 }
 
+AudioStream.prototype.setStreamType = function(streamType) {
+    PhoneGap.exec("AudioStream.setStreamType",streamType);
+}
+
 PhoneGap.addConstructor(function(){
     if(!window.plugins)
     {
