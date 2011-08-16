@@ -16,12 +16,14 @@ Add the plugin much like any other:
 
 ### Example
 ```javascript
+// Don't use these functions "as is", they're terrible. They just show the methods available.
+// You should be doing something useful with the progress and the changes in state at the least.
 function onDeviceReady()
 {
 	audioStreamer = window.plugins.audioStream;
 	audioStreamer.setStreamType("mp3"); // only needed if your stream's type isn't auto-detected
 }
-function play()
+function play(urlToStream)
 {
 	audioStreamer.play(urlToStream,playbackStateChanged,onError);
 	navigator.notification.activityStart();
