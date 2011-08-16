@@ -37,15 +37,15 @@ function playbackStateChanged(state)
 	console.log("state: "+state);
 	switch (state) {
 		case "isPlaying":
-			navigator.notification.activityStop();
+			console.log("Stream is playing");
 			progressTimer = setInterval("console.log(audioStreamer.progress + ' seconds')",300);
 			break;
 		case "isStopped":
-			navigator.notification.activityStop();
+			console.log("Stream is stopped");
 			clearInterval(progressTimer);
 			break;
 		case "isWaiting":
-			navigator.notification.activityStart(); 
+			console.log("Stream is waiting");
 			break;
 		default:
 		
