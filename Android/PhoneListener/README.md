@@ -25,9 +25,12 @@ function onDeviceReady()
 
 function onPhoneStateChanged(phoneState) 
 {
-	switch (phoneState) {
+	// phoneState is a JSON string. Parse it into an actual object
+	phoneState = JSON.parse(phoneState);
+	switch (phoneState.state) {
 		case "RINGING":
 			console.log('Phone is ringing.');
+			console.log('Incoming number: '+phoneState.number);
 			break;
 		case "OFFHOOK":
 			console.log('Phone is off the hook.');
@@ -38,7 +41,6 @@ function onPhoneStateChanged(phoneState)
 		default:
 			// no default...
 	}
-}
 
 function onError(error) {
 	// do something...
