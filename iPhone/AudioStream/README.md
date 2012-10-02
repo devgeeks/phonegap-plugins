@@ -1,7 +1,7 @@
 AudioStream
 ============
 
-**NOTE: This project uses a plugin that had a bug where the remote control buttons (say on the lock screen) were not sending the play/pause to the streaming plugin. Because of this I abandoned it in my own project and decided to use HTML5 Audio (new Audio()) instead for my own PhoneGap Radio Streaming project. I have now created a little example app using that tech instead at [https://github.com/devgeeks/ExampleHTML5AudioStreaming](https://github.com/devgeeks/ExampleHTML5AudioStreaming)**
+**NOTE: This project is a plugin that had a bug where the remote control buttons (say on the lock screen) were not sending the play/pause to the streaming plugin. Because of this I abandoned it in my own project and decided to use HTML5 Audio (new Audio()) instead for my own PhoneGap Radio Streaming project. I have now created a little example app using that tech instead at [https://github.com/devgeeks/ExampleHTML5AudioStreaming](https://github.com/devgeeks/ExampleHTML5AudioStreaming)**
 
 Installation
 ------------
