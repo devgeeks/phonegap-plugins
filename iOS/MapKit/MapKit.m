@@ -7,13 +7,7 @@
 #import "CDVAnnotation.h"
 #import "AsyncImageView.h"
 
-#ifdef CORDOVA_FRAMEWORK
-    // PhoneGap >= 1.2.0
-    #import <Cordova/JSONKit.h>
-#else
-    // https://github.com/johnezang/JSONKit
-    #import "JSONKit.h"
-#endif
+#import <Cordova/JSONKit.h>
 
 @implementation MapKitView
 
@@ -36,19 +30,19 @@
 {
 	self.childView = [[UIView alloc] init];
     self.mapView = [[MKMapView alloc] init];
-    [self.mapView sizeToFit];
+    //[self.mapView sizeToFit];
     self.mapView.delegate = self;
     self.mapView.multipleTouchEnabled   = YES;
     self.mapView.autoresizesSubviews    = YES;
     self.mapView.userInteractionEnabled = YES;
-	self.mapView.showsUserLocation = YES;
+	self.mapView.showsUserLocation = NO;
 	self.mapView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
 	self.childView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
 	
-	self.imageButton = [UIButton buttonWithType:UIButtonTypeCustom];
+	//self.imageButton = [UIButton buttonWithType:UIButtonTypeCustom];
 	
 	[self.childView addSubview:self.mapView];
-	[self.childView addSubview:self.imageButton];
+	//[self.childView addSubview:self.imageButton];
 
 	[ [ [ self viewController ] view ] addSubview:self.childView];  
 }
@@ -98,7 +92,7 @@
 - (void)addMapPins:(NSMutableArray*)arguments withDict:(NSMutableDictionary*)options;
 {
 
-  NSArray *pins = [[arguments objectAtIndex:0] objectFromJSONString];
+  NSArray *pins = [[arguments objectAtIndex:0] cdvjk_objectFromJSONString];
 	
   for (int y = 0; y < pins.count; y++) 
 	{
@@ -118,6 +112,26 @@
 		[self.mapView addAnnotation:annotation];
 		[annotation release];
 	}
+}
+
+- (void)addMapPin:(NSMutableArray*)arguments withDict:(NSMutableDictionary*)options;
+{
+
+  NSDictionary *pinData = [[arguments objectAtIndex:0] cdvjk_objectFromJSONString];
+  CLLocationCoordinate2D pinCoord = { [[pinData objectForKey:@"lat"] floatValue] , [[pinData objectForKey:@"lon"] floatValue] };
+  NSString *title=[[pinData valueForKey:@"title"] description];
+  NSString *subTitle=[[pinData valueForKey:@"subTitle"] description];
+  NSString *imageURL=[[pinData valueForKey:@"imageURL"] description];
+  NSString *pinColor=[[pinData valueForKey:@"pinColor"] description];
+  NSInteger index=[[pinData valueForKey:@"index"] integerValue];
+  BOOL selected = [[pinData valueForKey:@"selected"] boolValue];
+
+  CDVAnnotation *annotation = [[CDVAnnotation alloc] initWithCoordinate:pinCoord index:index title:title subTitle:subTitle imageURL:imageURL];
+  annotation.pinColor=pinColor;
+  annotation.selected = selected;
+    
+  [self.mapView addAnnotation:annotation];
+  [annotation release];
 }
 
 /**
@@ -153,14 +167,15 @@
 	CGRect webViewBounds = self.webView.bounds;
 	
 	CGRect mapBounds;
-  mapBounds = CGRectMake(
-    webViewBounds.origin.x,
-    webViewBounds.origin.y + (offsetTop / 2),
-    webViewBounds.size.width,
-    webViewBounds.origin.y + height
-  );
-		
+	mapBounds = CGRectMake(
+		webViewBounds.origin.x,
+		webViewBounds.origin.y + offsetTop,
+		webViewBounds.size.width,
+		webViewBounds.origin.y + height
+	);
+
 	[self.childView setFrame:mapBounds];
+	[self.childView setBounds:mapBounds];
 	[self.mapView setFrame:mapBounds];
 	
 	MKCoordinateRegion region=[ self.mapView regionThatFits: MKCoordinateRegionMakeWithDistance(centerCoord, 
@@ -168,11 +183,11 @@
 																						   diameter*(height / webViewBounds.size.width))];
 	[self.mapView setRegion:region animated:YES];
 	
-	CGRect frame = CGRectMake(285.0,12.0,  29.0, 29.0);
+	//CGRect frame = CGRectMake(285.0,12.0,  29.0, 29.0);
 	
-	[ self.imageButton setImage:[UIImage imageNamed:@"www/map-close-button.png"] forState:UIControlStateNormal];
-	[ self.imageButton setFrame:frame];
-	[ self.imageButton addTarget:self action:@selector(closeButton:) forControlEvents:UIControlEventTouchUpInside];
+	// [ self.imageButton setImage:[UIImage imageNamed:@"www/images/map-close-button.png"] forState:UIControlStateNormal];
+	// [ self.imageButton setFrame:frame];
+	// [ self.imageButton addTarget:self action:@selector(closeButton:) forControlEvents:UIControlEventTouchUpInside];
 }
 
 - (void) closeButton:(id)button
@@ -189,7 +204,7 @@
 		[self createView];
 	}
 	self.childView.hidden = NO;
-	self.mapView.showsUserLocation = YES;
+	self.mapView.showsUserLocation = NO;
 }
 
 
@@ -211,7 +226,8 @@
   }
 
 	CDVAnnotation *phAnnotation=(CDVAnnotation *) annotation;
-	NSString *identifier=[NSString stringWithFormat:@"INDEX[%i]", phAnnotation.index];
+	// NSString *identifier=[NSString stringWithFormat:@"INDEX[%i]", phAnnotation.index];
+    NSString *identifier=nil;
 
 	MKPinAnnotationView *annView = (MKPinAnnotationView *)[theMapView dequeueReusableAnnotationViewWithIdentifier:identifier];
 
@@ -242,11 +258,17 @@
 	}
 
 	annView.leftCalloutAccessoryView = asyncImage;
+    
+    
+    /*
+     UIButton *leftButton = [UIButton buttonWithType:UIButtonTypeRoundedRect];
+    [leftButton setTitle:annotation.title forState:UIControlStateNormal];
+    [annView setLeftCalloutAccessoryView:leftButton];
+     */
 
 
 	if (self.buttonCallback && phAnnotation.index!=-1)
 	{
-
 		UIButton *myDetailButton = [UIButton buttonWithType:UIButtonTypeDetailDisclosure];
 		myDetailButton.frame = CGRectMake(0, 0, 23, 23);
 		myDetailButton.contentVerticalAlignment = UIControlContentVerticalAlignmentCenter;
@@ -274,6 +296,7 @@
 - (void) checkButtonTapped:(id)button 
 {
 	UIButton *tmpButton = button;
+    NSLog(@"%d",tmpButton.tag);
 	NSString* jsString = [NSString stringWithFormat:@"%@(\"%i\");", self.buttonCallback, tmpButton.tag];
 	[self.webView stringByEvaluatingJavaScriptFromString:jsString];
 }
