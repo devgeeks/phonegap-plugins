@@ -226,8 +226,10 @@
   }
 
 	CDVAnnotation *phAnnotation=(CDVAnnotation *) annotation;
-	// NSString *identifier=[NSString stringWithFormat:@"INDEX[%i]", phAnnotation.index];
-    NSString *identifier=nil;
+	NSString *identifier=[NSString stringWithFormat:@"INDEX[%i]", phAnnotation.index];
+    // Set to nil if you don't want to use the resuse identifiers
+    // NSString *identifier=nil;
+
 
 	MKPinAnnotationView *annView = (MKPinAnnotationView *)[theMapView dequeueReusableAnnotationViewWithIdentifier:identifier];
 
