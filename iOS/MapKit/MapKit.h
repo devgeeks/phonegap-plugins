@@ -6,7 +6,12 @@
 #import <Foundation/Foundation.h>
 #import <UIKit/UIKit.h>
 #import <MapKit/MapKit.h>
-#import <Cordova/CDVPlugin.h>
+
+#ifdef CORDOVA_FRAMEWORK
+    #import <Cordova/CDVPlugin.h>
+#else
+    #import "CDVPlugin.h"
+#endif
 
 
 @interface MapKitView : CDVPlugin <MKMapViewDelegate> 
@@ -29,8 +34,6 @@
 - (void)clearMapPins:(NSMutableArray*)arguments withDict:(NSMutableDictionary*)options;
 
 - (void)addMapPins:(NSMutableArray*)arguments withDict:(NSMutableDictionary*)options;
-
-- (void)addMapPin:(NSMutableArray*)arguments withDict:(NSMutableDictionary*)options;
 
 - (void)setMapData:(NSMutableArray*)arguments withDict:(NSMutableDictionary*)options;
 
